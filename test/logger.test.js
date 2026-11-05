@@ -5,6 +5,8 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { logSmsResult, updateStats, resetCounters, debugLog, log } = require('../server/lib/logger');
+// 2026-11-05 09:54 +03: sample number replaced by the placeholder (mock data only), int-testnumber.
+const tn = require('./helpers/test-number');
 
 /**
  * Create a mock $db with KV store.
@@ -36,7 +38,7 @@ describe('logSmsResult', () => {
     await logSmsResult(db, {
       event_type: 'ticket_updated',
       recipient_type: 'requester',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       message_preview: 'Ticket #200 updated',
       status: 'sent',
       api_response_code: 'OK',
@@ -49,7 +51,7 @@ describe('logSmsResult', () => {
     const entry = logs[0];
     assert.equal(entry.event_type, 'ticket_updated');
     assert.equal(entry.recipient_type, 'requester');
-    assert.equal(entry.recipient_phone, '96598765432');
+    assert.equal(entry.recipient_phone, tn.PLACEHOLDER);
     assert.equal(entry.message_preview, 'Ticket #200 updated');
     assert.equal(entry.status, 'sent');
     assert.equal(entry.api_response_code, 'OK');
@@ -65,7 +67,7 @@ describe('logSmsResult', () => {
     await logSmsResult(db, {
       event_type: 'ticket_created',
       recipient_type: 'agent',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       message_preview: 'Ticket #100 created',
       status: 'sent',
       api_response_code: 'OK',
@@ -88,7 +90,7 @@ describe('logSmsResult', () => {
     await logSmsResult(db, {
       event_type: 'manual_send',
       recipient_type: 'manual',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       message_preview: longMessage,
       status: 'sent'
     });
@@ -99,7 +101,7 @@ describe('logSmsResult', () => {
     const db = createMockDb();
     await logSmsResult(db, {
       event_type: 'manual_send',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       status: 'failed'
     });
     const entry = db._kvData.kwtsms_logs[0];
@@ -116,7 +118,7 @@ describe('logSmsResult', () => {
     await logSmsResult(db, {
       event_type: 'ticket_created',
       recipient_type: 'requester',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       message_preview: 'Hello',
       status: 'failed',
       error_message: 'Invalid number'
@@ -137,7 +139,7 @@ describe('logSmsResult', () => {
     await logSmsResult(db, {
       event_type: 'manual_send',
       recipient_type: 'manual',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       message_preview: 'New entry',
       status: 'sent'
     });
@@ -153,7 +155,7 @@ describe('logSmsResult', () => {
     // Should not throw, failure is non-fatal
     await logSmsResult(db, {
       event_type: 'manual_send',
-      recipient_phone: '96598765432',
+      recipient_phone: tn.PLACEHOLDER,
       status: 'failed'
     });
   });

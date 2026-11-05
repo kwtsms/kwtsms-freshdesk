@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Sample phone numbers in the app and docs are now the placeholder 965XXXXXXXX; tests that need a real Kuwait number read it from the KWTSMS_TEST_NUMBER environment variable and skip when it is not set.
+
 ## [1.0.0] - 2026-03-19
 
 ### Added

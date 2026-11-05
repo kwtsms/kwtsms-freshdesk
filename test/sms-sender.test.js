@@ -13,6 +13,13 @@ const {
   prepareRecipients,
   buildLogEntry
 } = require('../server/lib/sms-sender');
+// 2026-11-05 09:53 +03: sample numbers removed (they belong to real people), int-testnumber.
+// Kuwait-specific tests read KWTSMS_TEST_NUMBER via tn.requireNumber() and skip when unset;
+// mocked send tests use U (unassigned code 999, passes validation, nobody holds it) and U2,
+// log-entry tests use tn.PLACEHOLDER.
+const tn = require('./helpers/test-number');
+const U = tn.UNASSIGNED_CC;
+const U2 = tn.otherNumber(U);
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -216,53 +223,77 @@ describe('isCacheStale', () => {
 // ---------------------------------------------------------------------------
 
 describe('prepareRecipients', () => {
-  it('normalizes and validates phone numbers', () => {
-    const result = prepareRecipients(['+965 9876 5432'], [], false, null);
-    assert.deepEqual(result, ['96598765432']);
+  it('normalizes and validates phone numbers', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    const result = prepareRecipients([v.plusSpaced], [], false, null);
+    assert.deepEqual(result, [v.plain]);
   });
 
-  it('filters out invalid phone numbers', () => {
-    const result = prepareRecipients(['abc', '12', '96598765432'], [], false, null);
-    assert.deepEqual(result, ['96598765432']);
+  it('filters out invalid phone numbers', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    const result = prepareRecipients(['abc', '12', v.plain], [], false, null);
+    assert.deepEqual(result, [v.plain]);
   });
 
-  it('deduplicates phone numbers', () => {
+  it('deduplicates phone numbers', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const result = prepareRecipients(
-      ['96598765432', '+96598765432', '0096598765432'],
+      [v.plain, v.plus, v.intl00],
       [], false, null
     );
-    assert.deepEqual(result, ['96598765432']);
+    assert.deepEqual(result, [v.plain]);
   });
 
-  it('filters by coverage when coverage list is non-empty', () => {
+  it('filters by coverage when coverage list is non-empty', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const result = prepareRecipients(
-      ['96598765432', '971501234567'],
+      [v.plain, '971501234567'],
       [965], false, null
     );
-    assert.deepEqual(result, ['96598765432']);
+    assert.deepEqual(result, [v.plain]);
   });
 
-  it('allows all numbers when coverage is empty', () => {
+  it('allows all numbers when coverage is empty', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const result = prepareRecipients(
-      ['96598765432', '971501234567'],
+      [v.plain, '971501234567'],
       [], false, null
     );
-    assert.deepEqual(result, ['96598765432', '971501234567']);
+    assert.deepEqual(result, [v.plain, '971501234567']);
   });
 
-  it('prepends defaultCountryCode to short local numbers (< 10 digits)', () => {
-    const result = prepareRecipients(['98765432'], [], false, '965');
-    assert.deepEqual(result, ['96598765432']);
+  it('prepends defaultCountryCode to short local numbers (< 10 digits)', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    const result = prepareRecipients([v.local], [], false, '965');
+    assert.deepEqual(result, [v.plain]);
   });
 
-  it('does not prepend defaultCountryCode to numbers >= 10 digits', () => {
-    const result = prepareRecipients(['96598765432'], [], false, '965');
-    assert.deepEqual(result, ['96598765432']);
+  it('does not prepend defaultCountryCode to numbers >= 10 digits', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    const result = prepareRecipients([v.plain], [], false, '965');
+    assert.deepEqual(result, [v.plain]);
   });
 
-  it('ignores defaultCountryCode when it is null', () => {
-    const result = prepareRecipients(['96598765432'], [], false, null);
-    assert.deepEqual(result, ['96598765432']);
+  it('ignores defaultCountryCode when it is null', (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    const result = prepareRecipients([v.plain], [], false, null);
+    assert.deepEqual(result, [v.plain]);
   });
 });
 
@@ -388,10 +419,10 @@ describe('guardGateway', () => {
 
 describe('buildLogEntry', () => {
   it('builds a correct log entry for a successful send', () => {
-    const entry = buildLogEntry('ticket_created', ['96598765432'], 'Hello', true, API_SUCCESS, 42);
+    const entry = buildLogEntry('ticket_created', [tn.PLACEHOLDER], 'Hello', true, API_SUCCESS, 42);
     assert.equal(entry.event_type, 'ticket_created');
     assert.equal(entry.recipient_type, 'customer');
-    assert.equal(entry.recipient_phone, '96598765432');
+    assert.equal(entry.recipient_phone, tn.PLACEHOLDER);
     assert.equal(entry.message_preview, 'Hello');
     assert.equal(entry.status, 'sent');
     assert.equal(entry.ticket_id, 42);
@@ -400,7 +431,7 @@ describe('buildLogEntry', () => {
   });
 
   it('builds a correct log entry for a failed send', () => {
-    const entry = buildLogEntry('manual_send', ['96598765432'], 'Hello', false, API_FAILURE, 0);
+    const entry = buildLogEntry('manual_send', [tn.PLACEHOLDER], 'Hello', false, API_FAILURE, 0);
     assert.equal(entry.status, 'failed');
     assert.equal(entry.recipient_type, 'customer');
     assert.equal(entry.api_response_code, 'ERR005');
@@ -408,12 +439,12 @@ describe('buildLogEntry', () => {
   });
 
   it('sets recipient_type to "admin" for admin events', () => {
-    const entry = buildLogEntry('admin_new_ticket', ['96598765432'], 'Alert', true, API_SUCCESS, 0);
+    const entry = buildLogEntry('admin_new_ticket', [tn.PLACEHOLDER], 'Alert', true, API_SUCCESS, 0);
     assert.equal(entry.recipient_type, 'admin');
   });
 
   it('defaults ticket_id to 0 when not provided', () => {
-    const entry = buildLogEntry('manual_send', ['96598765432'], 'Hello', true, API_SUCCESS);
+    const entry = buildLogEntry('manual_send', [tn.PLACEHOLDER], 'Hello', true, API_SUCCESS);
     assert.equal(entry.ticket_id, 0);
   });
 });
@@ -428,7 +459,7 @@ describe('send - guard: settings', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.includes('not configured'));
@@ -439,7 +470,7 @@ describe('send - guard: settings', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('disabled'));
@@ -455,7 +486,7 @@ describe('send - guard: gateway', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('not configured'));
@@ -466,7 +497,7 @@ describe('send - guard: gateway', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('balance'));
@@ -477,7 +508,7 @@ describe('send - guard: gateway', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('balance'));
@@ -490,7 +521,7 @@ describe('send - guard: message', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: '', eventType: 'manual_send'
+      phones: [U], message: '', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('empty'));
@@ -501,7 +532,7 @@ describe('send - guard: message', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: '<p><br></p>', eventType: 'manual_send'
+      phones: [U], message: '<p><br></p>', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('empty'));
@@ -512,7 +543,7 @@ describe('send - guard: message', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: '   \n  ', eventType: 'manual_send'
+      phones: [U], message: '   \n  ', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('empty'));
@@ -547,7 +578,7 @@ describe('send - guard: recipients', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.toLowerCase().includes('no valid recipients'));
@@ -564,12 +595,12 @@ describe('send - phone flattening', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432,96541234567'], message: 'Hello', eventType: 'manual_send'
+      phones: [U + ',' + U2], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, true);
     const body = JSON.parse(req._calls[0].options.body);
-    assert.ok(body.mobile.includes('96598765432'));
-    assert.ok(body.mobile.includes('96541234567'));
+    assert.ok(body.mobile.includes(U));
+    assert.ok(body.mobile.includes(U2));
   });
 
   it('flattens a mix of string entries and comma-separated entries', async () => {
@@ -577,13 +608,13 @@ describe('send - phone flattening', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432', '96541234567,971501234567'],
+      phones: [U, U2 + ',971501234567'],
       message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, true);
     const body = JSON.parse(req._calls[0].options.body);
-    assert.ok(body.mobile.includes('96598765432'));
-    assert.ok(body.mobile.includes('96541234567'));
+    assert.ok(body.mobile.includes(U));
+    assert.ok(body.mobile.includes(U2));
     assert.ok(body.mobile.includes('971501234567'));
   });
 
@@ -603,13 +634,13 @@ describe('send - phone flattening', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: [' 96598765432 , 96541234567 '],
+      phones: [' ' + U + ' , ' + U2 + ' '],
       message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, true);
     const body = JSON.parse(req._calls[0].options.body);
-    assert.ok(body.mobile.includes('96598765432'));
-    assert.ok(body.mobile.includes('96541234567'));
+    assert.ok(body.mobile.includes(U));
+    assert.ok(body.mobile.includes(U2));
   });
 });
 
@@ -623,7 +654,7 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: { username: 'test', password: 'test' },
-      phones: ['96598765432'], message: 'Hello World', eventType: 'manual_send', ticketId: 100
+      phones: [U], message: 'Hello World', eventType: 'manual_send', ticketId: 100
     });
     assert.equal(result.success, true);
     assert.ok(result.message.toLowerCase().includes('sent'));
@@ -634,12 +665,12 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: { username: 'test', password: 'test' },
-      phones: ['96598765432'], message: 'Hello World', eventType: 'manual_send'
+      phones: [U], message: 'Hello World', eventType: 'manual_send'
     });
     assert.equal(req._calls.length, 1);
     assert.equal(req._calls[0].templateName, 'sendSms');
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432');
+    assert.equal(body.mobile, U);
     assert.equal(body.message, 'Hello World');
     assert.equal(body.sender, 'KWT-SMS');
     assert.equal(body.test, '1'); // test_mode is true by default
@@ -652,7 +683,7 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
     assert.equal(body.test, '0');
@@ -663,33 +694,39 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
     assert.equal(body.sender, 'MYBRAND');
   });
 
-  it('normalizes phone numbers before sending', async () => {
+  it('normalizes phone numbers before sending', async (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const db = createMockDb(fullKvData());
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['+965 9876 5432'], message: 'Hello', eventType: 'manual_send'
+      phones: [v.plusSpaced], message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432');
+    assert.equal(body.mobile, v.plain);
   });
 
-  it('deduplicates phone numbers', async () => {
+  it('deduplicates phone numbers', async (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const db = createMockDb(fullKvData());
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432', '+96598765432', '0096598765432'],
+      phones: [v.plain, v.plus, v.intl00],
       message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432');
+    assert.equal(body.mobile, v.plain);
   });
 
   it('joins multiple valid recipients with comma', async () => {
@@ -697,23 +734,26 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432', '96541234567'],
+      phones: [U, U2],
       message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432,96541234567');
+    assert.equal(body.mobile, U + ',' + U2);
   });
 
-  it('filters phones by coverage when coverage is set', async () => {
+  it('filters phones by coverage when coverage is set', async (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const db = createMockDb(fullKvData({}, { coverage: [965] }));
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432', '971501234567'],
+      phones: [v.plain, '971501234567'],
       message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432');
+    assert.equal(body.mobile, v.plain);
   });
 
   it('allows all phones when coverage is empty', async () => {
@@ -721,11 +761,11 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432', '971501234567'],
+      phones: [U, '971501234567'],
       message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
-    assert.ok(body.mobile.includes('96598765432'));
+    assert.ok(body.mobile.includes(U));
     assert.ok(body.mobile.includes('971501234567'));
   });
 
@@ -734,7 +774,7 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(db._kvData.kwtsms_gateway.balance, 99);
   });
@@ -744,7 +784,7 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(db._kvData.kwtsms_stats.total_sent, 1);
     assert.equal(db._kvData.kwtsms_stats.today_sent, 1);
@@ -756,7 +796,7 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello World', eventType: 'ticket_created', ticketId: 42
+      phones: [U], message: 'Hello World', eventType: 'ticket_created', ticketId: 42
     });
     const logs = getLogs(db);
     assert.equal(logs.length, 1);
@@ -773,21 +813,24 @@ describe('send - successful send', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: '<p>Hello <b>World</b></p>', eventType: 'manual_send'
+      phones: [U], message: '<p>Hello <b>World</b></p>', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
     assert.equal(body.message, 'Hello World');
   });
 
-  it('applies defaultCountryCode from settings to short local numbers', async () => {
+  it('applies defaultCountryCode from settings to short local numbers', async (t) => {
+    // 2026-11-05 09:53 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
     const db = createMockDb(fullKvData({ default_country_code: '965' }));
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['98765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [v.local], message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432');
+    assert.equal(body.mobile, v.plain);
   });
 });
 
@@ -801,7 +844,7 @@ describe('send - failed send', () => {
     const req = createMockRequest(API_FAILURE);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.includes('Invalid credentials'));
@@ -812,7 +855,7 @@ describe('send - failed send', () => {
     const req = createMockRequest(API_FAILURE);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(db._kvData.kwtsms_stats.total_failed, 1);
     assert.equal(db._kvData.kwtsms_stats.today_failed, 1);
@@ -825,7 +868,7 @@ describe('send - failed send', () => {
     const req = createMockRequest(API_FAILURE);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     const logs = getLogs(db);
     assert.equal(logs.length, 1);
@@ -839,7 +882,7 @@ describe('send - failed send', () => {
     const req = createMockRequest(API_FAILURE);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(db._kvData.kwtsms_gateway.balance, 100);
   });
@@ -849,7 +892,7 @@ describe('send - failed send', () => {
     const req = createMockRequest(new Error('Network timeout'));
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.includes('Network timeout'));
@@ -860,7 +903,7 @@ describe('send - failed send', () => {
     const req = createMockRequest({ result: 'ERROR', code: 'ERR027', description: 'Message contains HTML' });
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.includes('Message contains HTML'));
@@ -871,7 +914,7 @@ describe('send - failed send', () => {
     const req = createMockRequest({ result: 'ERROR', code: 'ERR999' });
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, false);
     assert.ok(result.message.includes('ERR999'));
@@ -888,12 +931,12 @@ describe('send - edge cases', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['invalid', '96598765432', 'abc', '96541234567'],
+      phones: ['invalid', U, 'abc', U2],
       message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, true);
     const body = JSON.parse(req._calls[0].options.body);
-    assert.equal(body.mobile, '96598765432,96541234567');
+    assert.equal(body.mobile, U + ',' + U2);
   });
 
   it('defaults sender to KWT-SMS when active_sender_id is empty string', async () => {
@@ -901,7 +944,7 @@ describe('send - edge cases', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     const body = JSON.parse(req._calls[0].options.body);
     assert.equal(body.sender, 'KWT-SMS');
@@ -917,7 +960,7 @@ describe('send - edge cases', () => {
     const req = createMockRequest(API_SUCCESS);
     const result = await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     assert.equal(result.success, true);
   });
@@ -927,7 +970,7 @@ describe('send - edge cases', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'Hello', eventType: 'manual_send'
+      phones: [U], message: 'Hello', eventType: 'manual_send'
     });
     const logs = getLogs(db);
     assert.equal(logs[0].ticket_id, 0);
@@ -938,7 +981,7 @@ describe('send - edge cases', () => {
     const req = createMockRequest(API_SUCCESS);
     await send({
       $request: req, $db: db, credentials: null,
-      phones: ['96598765432'], message: 'New ticket alert', eventType: 'admin_new_ticket'
+      phones: [U], message: 'New ticket alert', eventType: 'admin_new_ticket'
     });
     const logs = getLogs(db);
     assert.equal(logs[0].recipient_type, 'admin');

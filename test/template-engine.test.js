@@ -5,6 +5,8 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { replacePlaceholders, resolveTemplate, buildPlaceholderData } = require('../server/lib/template-engine');
+// 2026-11-05 09:54 +03: sample number replaced by the placeholder (mock data only), int-testnumber.
+const tn = require('./helpers/test-number');
 
 describe('replacePlaceholders', () => {
   it('replaces single placeholder', () => {
@@ -82,7 +84,7 @@ describe('buildPlaceholderData', () => {
     const payload = {
       data: {
         ticket: { id: 1042, subject: 'Login issue', status: 2, priority: 3, responder_name: 'Agent A', group_name: 'Support' },
-        requester: { name: 'Ahmed', phone: '96598765432', email: 'ahmed@test.com' }
+        requester: { name: 'Ahmed', phone: tn.PLACEHOLDER, email: 'ahmed@test.com' }
       }
     };
     const result = buildPlaceholderData(payload, 'Acme', 'en');
@@ -97,12 +99,12 @@ describe('buildPlaceholderData', () => {
     const payload = {
       data: {
         ticket: {},
-        requester: { name: 'Ahmed', phone: '96598765432', email: 'ahmed@test.com' }
+        requester: { name: 'Ahmed', phone: tn.PLACEHOLDER, email: 'ahmed@test.com' }
       }
     };
     const result = buildPlaceholderData(payload, '', 'en');
     assert.equal(result.requester_name, 'Ahmed');
-    assert.equal(result.requester_phone, '96598765432');
+    assert.equal(result.requester_phone, tn.PLACEHOLDER);
     assert.equal(result.requester_email, 'ahmed@test.com');
   });
 

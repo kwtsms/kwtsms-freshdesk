@@ -130,7 +130,8 @@ function normalize(phone) {
   // Strip all non-digit characters
   result = result.replace(/\D/g, '');
 
-  // Strip leading zeros (handles 00 prefix like 0096598765432)
+  // Strip leading zeros (handles 00 prefix like 00965XXXXXXXX)
+  // 2026-11-05 09:55 +03: sample number replaced by the placeholder, int-testnumber
   result = result.replace(/^0+/, '');
 
   return result;

@@ -5,34 +5,64 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { normalize, validate, deduplicate } = require('../server/lib/phone-utils');
+// 2026-11-05 09:54 +03: sample numbers removed (they belong to real people), int-testnumber.
+// normalize/validate tests read KWTSMS_TEST_NUMBER and build the formats at runtime; dedup uses the placeholder.
+const tn = require('./helpers/test-number');
 
 describe('normalize', () => {
-  it('keeps valid international format digits only', () => {
-    assert.equal(normalize('96598765432'), '96598765432');
+  it('keeps valid international format digits only', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.plain), v.plain);
   });
-  it('strips + prefix', () => {
-    assert.equal(normalize('+96598765432'), '96598765432');
+  it('strips + prefix', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.plus), v.plain);
   });
-  it('strips 00 prefix', () => {
-    assert.equal(normalize('0096598765432'), '96598765432');
+  it('strips 00 prefix', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.intl00), v.plain);
   });
-  it('strips spaces', () => {
-    assert.equal(normalize('965 9876 5432'), '96598765432');
+  it('strips spaces', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.spaced), v.plain);
   });
-  it('strips dashes', () => {
-    assert.equal(normalize('965-9876-5432'), '96598765432');
+  it('strips dashes', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.dashed), v.plain);
   });
-  it('strips parentheses and dots', () => {
-    assert.equal(normalize('(965) 9876.5432'), '96598765432');
+  it('strips parentheses and dots', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.parenDot), v.plain);
   });
-  it('converts Arabic-Indic digits', () => {
-    assert.equal(normalize('٩٦٥٩٨٧٦٥٤٣٢'), '96598765432');
+  it('converts Arabic-Indic digits', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.arabic), v.plain);
   });
-  it('converts Extended Arabic-Indic digits', () => {
-    assert.equal(normalize('۹۶۵۹۸۷۶۵۴۳۲'), '96598765432');
+  it('converts Extended Arabic-Indic digits', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize(v.persian), v.plain);
   });
-  it('handles leading zeros stripped', () => {
-    assert.equal(normalize('098765432'), '98765432');
+  it('handles leading zeros stripped', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(normalize('0' + v.local), v.local);
   });
   it('returns empty string for null/undefined', () => {
     assert.equal(normalize(null), '');
@@ -42,8 +72,11 @@ describe('normalize', () => {
 });
 
 describe('validate', () => {
-  it('accepts valid Kuwait mobile (965 + 8 digits)', () => {
-    assert.equal(validate('96598765432'), true);
+  it('accepts valid Kuwait mobile (965 + 8 digits)', (t) => {
+    // 2026-11-05 09:54 +03: needs valid Kuwait digits, reads KWTSMS_TEST_NUMBER, int-testnumber
+    const n = tn.requireNumber(t); if (!n) return;
+    const v = tn.variants(n);
+    assert.equal(validate(v.plain), true);
   });
   it('accepts valid international number (7-15 digits)', () => {
     assert.equal(validate('971501234567'), true);
@@ -65,8 +98,8 @@ describe('validate', () => {
 describe('deduplicate', () => {
   it('removes duplicate numbers', () => {
     assert.deepEqual(
-      deduplicate(['96598765432', '96512345678', '96598765432']),
-      ['96598765432', '96512345678']
+      deduplicate([tn.PLACEHOLDER, '96512345678', tn.PLACEHOLDER]),
+      [tn.PLACEHOLDER, '96512345678']
     );
   });
   it('returns empty array for empty input', () => {

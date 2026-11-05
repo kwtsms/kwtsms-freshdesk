@@ -3,7 +3,8 @@
  * Related: server/lib/sms-sender.js, server/server.js
  *
  * kwtSMS requires digits only, no + prefix, no spaces, no dashes.
- * International format: country code + number (e.g., 96598765432)
+ * International format: country code + number (e.g., 965XXXXXXXX)
+ * 2026-11-05 09:55 +03: sample number replaced by the placeholder, int-testnumber
  */
 
 // Arabic-Indic and Extended Arabic-Indic digit mapping
@@ -29,7 +30,8 @@ function normalize(phone) {
   // Strip all non-digit characters
   result = result.replace(/\D/g, '');
 
-  // Strip leading zeros (handles 00 prefix like 0096598765432)
+  // Strip leading zeros (handles 00 prefix like 00965XXXXXXXX)
+  // 2026-11-05 09:55 +03: sample number replaced by the placeholder, int-testnumber
   result = result.replace(/^0+/, '');
 
   return result;
