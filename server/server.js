@@ -92,6 +92,11 @@ const KWTSMS = {
   MAX_PAGES: 7
 };
 
+// 2026-11-05 15:02 +03: integration name and version in every kwtSMS request body ("client") and in the
+// User-Agent of config/requests.json, no personal data, so kwtSMS can count accounts per
+// integration. server.js cannot require() package.json: keep equal to its "version", #939.
+const KWTSMS_CLIENT = 'kwtsms-freshdesk/0.8.0';
+
 
 // Status labels for Freshdesk statuses (used in template replacement)
 const STATUS_LABELS = {
@@ -741,7 +746,8 @@ function sleep(ms) {
 // ======================================================================
 
 function getCredentials(args) {
-  return { username: args.iparams.kwtsms_username, password: args.iparams.kwtsms_password };
+  // 2026-11-05 15:02 +03: client token rides with the credentials, so every request body carries it, #939.
+  return { username: args.iparams.kwtsms_username, password: args.iparams.kwtsms_password, client: KWTSMS_CLIENT };
 }
 
 async function loadSettings() {
