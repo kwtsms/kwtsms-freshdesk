@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme-header-dark.png">
+  <img alt="kwtSMS for Freshdesk" src=".github/assets/readme-header-light.png">
+</picture>
+
 # kwtSMS for Freshdesk
 
 [![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/kwtsms/kwtsms-freshdesk/releases/tag/v0.8.0)
